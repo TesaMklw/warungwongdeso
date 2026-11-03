@@ -8,7 +8,7 @@ import Tentang from "./halaman/Tentang";
 
 export default function App() {
 	return (
-		<BrowserRouter>
+		<BrowserRouter basename={import.meta.env.BASE_URL}>
 			<Routes>
 				<Route element={<TataLetak />}>
 					<Route index element={<Beranda />} />
