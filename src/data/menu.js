@@ -202,3 +202,108 @@ export function cariMenu(id) {
 	return null;
 }
 
+export const KUNCI_DATA = "warung-wong-deso-admin";
+export const kategoriAwal = kelompokMenu.map((kelompok) => kelompok.nama);
+
+export function menuAwal() {
+	return kelompokMenu.flatMap((kelompok) =>
+		kelompok.item.map((item) => ({
+			id: item.id,
+			nama: item.nama,
+			keterangan: item.keterangan,
+			harga: item.harga,
+			kategori: kelompok.nama,
+		})),
+	);
+}
+
+function normalisasiItem(item) {
+	return {
+		id: item.id,
+		nama: String(item.nama || "").trim(),
+		kategori: String(item.kategori || "").trim(),
+		harga: Number(item.harga) || 0,
+		keterangan: String(item.keterangan ?? item.deskripsi ?? ""),
+	};
+}
+
+function susunKategori(menu, tersimpan) {
+	const dasar = Array.isArray(tersimpan)
+		? tersimpan.map((nama) => String(nama).trim()).filter(Boolean)
+		: [...kategoriAwal];
+	const unik = [];
+
+	for (const nama of [...dasar, ...menu.map((item) => item.kategori)]) {
+		if (!nama) continue;
+		if (unik.some((ada) => ada.toLowerCase() === nama.toLowerCase())) continue;
+		unik.push(nama);
+	}
+
+	return unik.length ? unik : ["Menu Utama"];
+}
+
+export function bacaDataWarung() {
+	const cadangan = {
+		kategori: [...kategoriAwal],
+		menu: menuAwal(),
+		orders: [],
+	};
+	if (typeof window === "undefined") return cadangan;
+
+	try {
+		const mentah = window.localStorage.getItem(KUNCI_DATA);
+		if (!mentah) return cadangan;
+
+		const parsed = JSON.parse(mentah);
+		const orders = Array.isArray(parsed.orders) ? parsed.orders : [];
+		const menuTersimpan = Array.isArray(parsed.menu) ? parsed.menu : [];
+		const punyaKatalog = Array.isArray(parsed.kategori);
+		const awal = menuAwal();
+		const idAwal = new Set(awal.map((item) => String(item.id)));
+		const menu = punyaKatalog
+			? menuTersimpan.map(normalisasiItem).filter((item) => item.nama)
+			: [
+					...awal,
+					...menuTersimpan
+						.map(normalisasiItem)
+						.filter((item) => item.nama && !idAwal.has(String(item.id))),
+				];
+
+		return {
+			kategori: susunKategori(menu, punyaKatalog ? parsed.kategori : null),
+			menu,
+			orders,
+		};
+	} catch {
+		return cadangan;
+	}
+}
+
+export function simpanDataWarung(data) {
+	if (typeof window === "undefined") return;
+	window.localStorage.setItem(
+		KUNCI_DATA,
+		JSON.stringify({
+			kategori: data.kategori,
+			menu: data.menu,
+			orders: data.orders,
+		}),
+	);
+}
+
+export function tambahPesanan(pelanggan, pesanan) {
+	const data = bacaDataWarung();
+	const order = {
+		id: `WD-${Date.now()}`,
+		nama: pelanggan.nama,
+		menu: pesanan.map((item) => `${item.nama} x${item.jumlah}`).join(", "),
+		total: pesanan.reduce((jumlah, item) => jumlah + item.harga * item.jumlah, 0),
+		status: "Menunggu",
+	};
+
+	simpanDataWarung({
+		...data,
+		orders: [...data.orders, order],
+	});
+}
+

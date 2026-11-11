@@ -12,7 +12,7 @@ import {
 } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { cariMenu, formatRupiah, kelompokMenu } from "../data/menu";
+import { bacaDataWarung, formatRupiah, KUNCI_DATA, tambahPesanan } from "../data/menu";
 
 const awalPelanggan = {
 	nama: "",
@@ -37,39 +37,8 @@ const metodeBayar = [
 	{ nilai: "qris", label: "QRIS" },
 ];
 
-const daftarMenu = kelompokMenu.flatMap((kelompok) =>
-	kelompok.item.map((item) => ({ ...item, kategori: kelompok.nama })),
-);
-const ADMIN_STORAGE_KEY = "warung-wong-deso-admin";
-
 function teksCari(item) {
 	return `${item.nama} ${item.keterangan} ${item.kategori}`.toLowerCase();
-}
-
-function simpanPesananKeAdmin(pelanggan, pesanan) {
-	if (typeof window === "undefined") return;
-
-	try {
-		const stored = JSON.parse(window.localStorage.getItem(ADMIN_STORAGE_KEY) ?? "{\"menu\":[],\"orders\":[]}");
-		const orderText = pesanan.map((item) => `${item.nama} x${item.jumlah}`).join(", ");
-		const nextOrder = {
-			id: `WD-${Date.now()}`,
-			nama: pelanggan.nama,
-			menu: orderText,
-			total: pesanan.reduce((jumlah, item) => jumlah + item.harga * item.jumlah, 0),
-			status: "Menunggu",
-		};
-
-		window.localStorage.setItem(
-			ADMIN_STORAGE_KEY,
-			JSON.stringify({
-				menu: Array.isArray(stored.menu) ? stored.menu : [],
-				orders: [...(Array.isArray(stored.orders) ? stored.orders : []), nextOrder],
-			}),
-		);
-	} catch {
-		// Abaikan bila penyimpanan lokal tidak tersedia.
-	}
 }
 
 export default function Menu() {
@@ -82,6 +51,7 @@ export default function Menu() {
 	const [tampilKonfirmasi, setTampilKonfirmasi] = useState(false);
 	const [metode, setMetode] = useState("");
 	const [berhasil, setBerhasil] = useState(false);
+	const [katalog, setKatalog] = useState(() => bacaDataWarung());
 	const sudahBayar = useRef(false);
 
 	const kunciAkun = pengguna?.peran === "pelanggan" ? pengguna.username : "";
@@ -96,6 +66,31 @@ export default function Menu() {
 	useEffect(() => {
 		document.title = "Warung Wong Deso - Menu";
 	}, []);
+
+	useEffect(() => {
+		function segarkan(event) {
+			if (event.key && event.key !== KUNCI_DATA) return;
+			setKatalog(bacaDataWarung());
+		}
+
+		window.addEventListener("storage", segarkan);
+		return () => window.removeEventListener("storage", segarkan);
+	}, []);
+
+	const kelompokMenu = useMemo(
+		() =>
+			katalog.kategori
+				.map((nama) => ({
+					nama,
+					item: katalog.menu.filter((item) => item.kategori === nama),
+				}))
+				.filter((kelompok) => kelompok.item.length > 0),
+		[katalog],
+	);
+	const daftarMenu = useMemo(
+		() => kelompokMenu.flatMap((kelompok) => kelompok.item),
+		[kelompokMenu],
+	);
 
 	const kata = cari.trim().toLowerCase();
 	const sedangMenyusun = urutan !== "bawaan" || kata.length > 0;
@@ -121,11 +116,11 @@ export default function Menu() {
 			else lain.push(item);
 		}
 		return [...cocok, ...lain];
-	}, [kata, urutan]);
+	}, [daftarMenu, kata, urutan]);
 
 	const pesanan = keranjang
 		.map((item) => {
-			const menu = cariMenu(item.id);
+			const menu = daftarMenu.find((menuItem) => menuItem.id === item.id);
 			if (!menu) return null;
 			return { ...menu, jumlah: item.jumlah };
 		})
@@ -172,7 +167,7 @@ export default function Menu() {
 
 	function bayar() {
 		if (!metode || pesanan.length === 0) return;
-		simpanPesananKeAdmin(pelanggan, pesanan);
+		tambahPesanan(pelanggan, pesanan);
 		sudahBayar.current = true;
 		setBerhasil(true);
 		setTampilKonfirmasi(false);
@@ -264,7 +259,11 @@ export default function Menu() {
 								</tr>
 							</thead>
 							<tbody>
-								{sedangMenyusun
+								{daftarMenu.length === 0 ? (
+									<tr>
+										<td colSpan={4}>Menu belum tersedia.</td>
+									</tr>
+								) : sedangMenyusun
 									? tampilan.map((item) => barisMenu(item, item.kategori, 1))
 									: kelompokMenu.map((kelompok) =>
 											kelompok.item.map((item, indeks) =>

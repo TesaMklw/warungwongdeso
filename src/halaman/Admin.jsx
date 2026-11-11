@@ -14,38 +14,24 @@ import {
 } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-
-const STORAGE_KEY = "warung-wong-deso-admin";
-
-const defaultMenu = [];
-
-const defaultOrders = [];
+import {
+	bacaDataWarung,
+	KUNCI_DATA,
+	kategoriAwal,
+	menuAwal,
+	simpanDataWarung,
+} from "../data/menu";
 
 const statusSteps = ["Menunggu", "Dimasak", "Siap diantar", "Selesai"];
-const formulirKosong = {
-	nama: "",
-	kategori: "Menu Utama",
-	harga: "",
-	deskripsi: "",
-};
 const formatRupiah = (nilai) => `Rp\u00a0${Number(nilai).toLocaleString("id-ID")}`;
 
-function readStoredData() {
-	if (typeof window === "undefined") {
-		return { menu: defaultMenu, orders: defaultOrders };
-	}
-
-	try {
-		const raw = window.localStorage.getItem(STORAGE_KEY);
-		if (!raw) return { menu: defaultMenu, orders: defaultOrders };
-		const parsed = JSON.parse(raw);
-		return {
-			menu: Array.isArray(parsed.menu) && parsed.menu.length ? parsed.menu : defaultMenu,
-			orders: Array.isArray(parsed.orders) && parsed.orders.length ? parsed.orders : defaultOrders,
-		};
-	} catch {
-		return { menu: defaultMenu, orders: defaultOrders };
-	}
+function formulirKosong(kategori = kategoriAwal) {
+	return {
+		nama: "",
+		kategori: kategori[0] || "",
+		harga: "",
+		keterangan: "",
+	};
 }
 
 export default function Admin() {
@@ -53,22 +39,41 @@ export default function Admin() {
 	const navigate = useNavigate();
 	const adminAktif = pengguna?.peran === "admin";
 	const [tab, setTab] = useState("dashboard");
-	const [menu, setMenu] = useState(() => readStoredData().menu);
-	const [orders, setOrders] = useState(() => readStoredData().orders);
-	const [form, setForm] = useState(formulirKosong);
+	const [kategori, setKategori] = useState(() => bacaDataWarung().kategori);
+	const [menu, setMenu] = useState(() => bacaDataWarung().menu);
+	const [orders, setOrders] = useState(() => bacaDataWarung().orders);
+	const [form, setForm] = useState(() => formulirKosong(bacaDataWarung().kategori));
 	const [editingId, setEditingId] = useState(null);
 	const [tampilReset, setTampilReset] = useState(false);
 	const [konfirmasiMenu, setKonfirmasiMenu] = useState(null);
+	const [namaKategori, setNamaKategori] = useState("");
+	const [ubahKategori, setUbahKategori] = useState(null);
+	const [draftKategori, setDraftKategori] = useState("");
+	const [pesanKategori, setPesanKategori] = useState("");
+	const [kategoriDihapus, setKategoriDihapus] = useState(null);
 
 	useEffect(() => {
 		document.title = "Warung Wong Deso - Panel Admin";
 	}, []);
 
 	useEffect(() => {
-		if (typeof window !== "undefined") {
-			window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ menu, orders }));
+		simpanDataWarung({ kategori, menu, orders });
+	}, [kategori, menu, orders]);
+
+	useEffect(() => {
+		function segarkan(event) {
+			if (event.key && event.key !== KUNCI_DATA) return;
+			const data = bacaDataWarung();
+			setOrders((current) => {
+				const ids = new Set(current.map((order) => order.id));
+				const baru = data.orders.filter((order) => !ids.has(order.id));
+				return baru.length ? [...current, ...baru] : current;
+			});
 		}
-	}, [menu, orders]);
+
+		window.addEventListener("storage", segarkan);
+		return () => window.removeEventListener("storage", segarkan);
+	}, []);
 
 	const totalPendapatan = useMemo(
 		() => orders.reduce((sum, item) => sum + Number(item.total || 0), 0),
@@ -148,10 +153,10 @@ export default function Admin() {
 			jenis: editingId ? "ubah" : "tambah",
 			item: {
 				id: editingId ?? Date.now(),
-				nama: form.nama,
+				nama: form.nama.trim(),
 				kategori: form.kategori,
 				harga: Number(form.harga) || 0,
-				deskripsi: form.deskripsi,
+				keterangan: form.keterangan.trim(),
 			},
 		});
 	};
@@ -164,15 +169,15 @@ export default function Admin() {
 			setMenu((current) => current.filter((menuItem) => menuItem.id !== item.id));
 			if (editingId === item.id) {
 				setEditingId(null);
-				setForm(formulirKosong);
+				setForm(formulirKosong(kategori));
 			}
 		} else if (jenis === "ubah") {
 			setMenu((current) => current.map((menuItem) => (menuItem.id === item.id ? item : menuItem)));
 			setEditingId(null);
-			setForm(formulirKosong);
+			setForm(formulirKosong(kategori));
 		} else {
-			setMenu((current) => [item, ...current]);
-			setForm(formulirKosong);
+			setMenu((current) => [...current, item]);
+			setForm(formulirKosong([item.kategori]));
 		}
 
 		setKonfirmasiMenu(null);
@@ -184,7 +189,7 @@ export default function Admin() {
 			nama: item.nama,
 			kategori: item.kategori,
 			harga: String(item.harga),
-			deskripsi: item.deskripsi,
+			keterangan: item.keterangan || "",
 		});
 		setTab("menu");
 	};
@@ -204,12 +209,81 @@ export default function Admin() {
 		navigate("/");
 	};
 
-	const resetAdminData = () => {
-		setMenu([]);
-		setOrders([]);
-		if (typeof window !== "undefined") {
-			window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ menu: [], orders: [] }));
+	const namaKategoriSama = (a, b) => a.toLowerCase() === b.toLowerCase();
+
+	const tambahKategori = (event) => {
+		event.preventDefault();
+		const nama = namaKategori.trim();
+		if (!nama) return;
+		if (kategori.some((item) => namaKategoriSama(item, nama))) {
+			setPesanKategori("Kategori itu sudah ada.");
+			return;
 		}
+		setKategori((current) => [...current, nama]);
+		setNamaKategori("");
+		setPesanKategori("");
+	};
+
+	const simpanUbahKategori = () => {
+		const nama = draftKategori.trim();
+		if (!nama || !ubahKategori) return;
+		if (kategori.some((item) => item !== ubahKategori && namaKategoriSama(item, nama))) {
+			setPesanKategori("Kategori itu sudah ada.");
+			return;
+		}
+		setKategori((current) => current.map((item) => (item === ubahKategori ? nama : item)));
+		setMenu((current) =>
+			current.map((item) =>
+				item.kategori === ubahKategori ? { ...item, kategori: nama } : item,
+			),
+		);
+		setForm((current) =>
+			current.kategori === ubahKategori ? { ...current, kategori: nama } : current,
+		);
+		setUbahKategori(null);
+		setDraftKategori("");
+		setPesanKategori("");
+	};
+
+	const hapusKategori = () => {
+		const nama = kategoriDihapus;
+		if (!nama) return;
+		const sisa = kategori.filter((item) => item !== nama);
+		setKategori(sisa);
+		setForm((current) =>
+			current.kategori === nama ? formulirKosong(sisa) : current,
+		);
+		if (ubahKategori === nama) {
+			setUbahKategori(null);
+			setDraftKategori("");
+		}
+		setKategoriDihapus(null);
+		setPesanKategori("");
+	};
+
+	const mintaHapusKategori = (nama) => {
+		if (menu.some((item) => item.kategori === nama)) {
+			setPesanKategori(`Masih ada menu di kategori "${nama}". Pindahkan atau hapus menunya dulu.`);
+			return;
+		}
+		if (kategori.length <= 1) {
+			setPesanKategori("Minimal satu kategori.");
+			return;
+		}
+		setPesanKategori("");
+		setKategoriDihapus(nama);
+	};
+
+	const resetAdminData = () => {
+		setKategori([...kategoriAwal]);
+		setMenu(menuAwal());
+		setOrders([]);
+		setEditingId(null);
+		setForm(formulirKosong(kategoriAwal));
+		setUbahKategori(null);
+		setDraftKategori("");
+		setNamaKategori("");
+		setPesanKategori("");
 		setTampilReset(false);
 	};
 
@@ -357,6 +431,79 @@ export default function Admin() {
 			)}
 
 			{tab === "menu" && (
+				<>
+				<Card className="shadow-sm border-0 admin-card mb-4">
+					<Card.Body>
+						<h3 className="judul-kartu mb-1">Kategori</h3>
+						<p className="admin-small-text mb-3">
+							Kategori dan menu di halaman ini langsung dipakai di halaman Menu pada browser ini.
+						</p>
+						<Form onSubmit={tambahKategori} className="mb-3">
+							<Form.Label htmlFor="nama-kategori">Nama kategori</Form.Label>
+							<div className="d-flex flex-column flex-sm-row gap-2">
+								<Form.Control
+									id="nama-kategori"
+									value={namaKategori}
+									onChange={(event) => setNamaKategori(event.target.value)}
+									placeholder="Contoh: Cemilan"
+								/>
+								<Button type="submit" variant="primary" className="text-nowrap">Tambah Kategori</Button>
+							</div>
+						</Form>
+						{pesanKategori && <p className="text-danger small mb-3">{pesanKategori}</p>}
+						<Table responsive className="admin-table mb-0">
+							<thead>
+								<tr><th>Nama</th><th>Jumlah menu</th><th>Aksi</th></tr>
+							</thead>
+							<tbody>
+								{kategori.map((nama) => (
+									<tr key={nama}>
+										<td>
+											{ubahKategori === nama ? (
+												<Form.Control
+													value={draftKategori}
+													onChange={(event) => setDraftKategori(event.target.value)}
+													aria-label={`Nama baru untuk ${nama}`}
+												/>
+											) : (
+												nama
+											)}
+										</td>
+										<td>{menu.filter((item) => item.kategori === nama).length}</td>
+										<td>
+											<div className="d-flex gap-2">
+												{ubahKategori === nama ? (
+													<>
+														<Button size="sm" variant="primary" type="button" onClick={simpanUbahKategori}>Simpan</Button>
+														<Button size="sm" variant="outline-secondary" type="button" onClick={() => {
+															setUbahKategori(null);
+															setDraftKategori("");
+														}}>
+															Batal
+														</Button>
+													</>
+												) : (
+													<>
+														<Button size="sm" variant="outline-primary" type="button" onClick={() => {
+															setUbahKategori(nama);
+															setDraftKategori(nama);
+															setPesanKategori("");
+														}}>
+															Ubah
+														</Button>
+														<Button size="sm" variant="outline-danger" type="button" onClick={() => mintaHapusKategori(nama)}>
+															Hapus
+														</Button>
+													</>
+												)}
+											</div>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</Table>
+					</Card.Body>
+				</Card>
 				<Row className="g-4">
 					<Col lg={5}>
 						<Card className="shadow-sm border-0 admin-card h-100">
@@ -369,10 +516,10 @@ export default function Admin() {
 									</Form.Group>
 									<Form.Group className="mb-3">
 										<Form.Label>Kategori</Form.Label>
-										<Form.Select name="kategori" value={form.kategori} onChange={handleFormChange}>
-											<option>Menu Utama</option>
-											<option>Lauk Tambahan</option>
-											<option>Minuman</option>
+										<Form.Select name="kategori" value={form.kategori} onChange={handleFormChange} required>
+											{kategori.map((nama) => (
+												<option key={nama} value={nama}>{nama}</option>
+											))}
 										</Form.Select>
 									</Form.Group>
 									<Form.Group className="mb-3">
@@ -380,15 +527,15 @@ export default function Admin() {
 										<Form.Control name="harga" type="number" min="0" value={form.harga} onChange={handleFormChange} placeholder="15000" required />
 									</Form.Group>
 									<Form.Group className="mb-3">
-										<Form.Label>Deskripsi</Form.Label>
-										<Form.Control as="textarea" rows={3} name="deskripsi" value={form.deskripsi} onChange={handleFormChange} placeholder="Masukkan deskripsi menu" />
+										<Form.Label>Keterangan</Form.Label>
+										<Form.Control as="textarea" rows={3} name="keterangan" value={form.keterangan} onChange={handleFormChange} placeholder="Masukkan keterangan menu" />
 									</Form.Group>
 									<div className="d-flex gap-2">
 										<Button type="submit" variant="primary">{editingId ? "Simpan Perubahan" : "Tambah Menu"}</Button>
 										{editingId && (
 											<Button variant="outline-secondary" onClick={() => {
 												setEditingId(null);
-												setForm(formulirKosong);
+												setForm(formulirKosong(kategori));
 											}}>
 												Batal
 											</Button>
@@ -404,13 +551,13 @@ export default function Admin() {
 								<h3 className="judul-kartu mb-3">Daftar Menu</h3>
 								<Table responsive className="admin-table mb-0">
 									<thead>
-										<tr><th>Nama</th><th>Kategori</th><th>Harga</th><th>Deskripsi</th><th>Aksi</th></tr>
+										<tr><th>Nama</th><th>Kategori</th><th>Harga</th><th>Keterangan</th><th>Aksi</th></tr>
 									</thead>
 									<tbody>
 										{menu.length === 0 ? (
 											<tr>
 												<td colSpan={5} className="text-center py-4 text-muted">
-													Belum ada menu tambahan. Tambah menu di formulir sebelah kiri, lalu pilih barisnya untuk diubah atau dihapus.
+													Belum ada menu. Tambah menu di formulir sebelah kiri.
 												</td>
 											</tr>
 										) : (
@@ -423,7 +570,7 @@ export default function Admin() {
 													<td>{item.nama}</td>
 													<td>{item.kategori}</td>
 													<td className="text-nowrap">{formatRupiah(item.harga)}</td>
-													<td>{item.deskripsi}</td>
+													<td>{item.keterangan}</td>
 													<td>
 														<div className="d-flex gap-2">
 															<Button size="sm" variant="outline-primary" onClick={(event) => {
@@ -449,6 +596,7 @@ export default function Admin() {
 						</Card>
 					</Col>
 				</Row>
+				</>
 			)}
 
 			{tab === "orders" && (
@@ -540,12 +688,27 @@ export default function Admin() {
 				</Modal.Footer>
 			</Modal>
 
+			<Modal show={Boolean(kategoriDihapus)} onHide={() => setKategoriDihapus(null)} centered>
+				<Modal.Header closeButton>
+					<Modal.Title>Hapus Kategori</Modal.Title>
+				</Modal.Header>
+				<Modal.Body>
+					Yakin ingin menghapus kategori "{kategoriDihapus}"?
+				</Modal.Body>
+				<Modal.Footer>
+					<Button variant="outline-secondary" onClick={() => setKategoriDihapus(null)}>
+						Batal
+					</Button>
+					<Button variant="outline-danger" onClick={hapusKategori}>Ya, hapus</Button>
+				</Modal.Footer>
+			</Modal>
+
 			<Modal show={tampilReset} onHide={() => setTampilReset(false)} centered>
 				<Modal.Header closeButton>
 					<Modal.Title>Reset Data</Modal.Title>
 				</Modal.Header>
 				<Modal.Body>
-					Yakin ingin menghapus semua menu tambahan dan pesanan?
+					Yakin ingin mengembalikan menu dan kategori ke bawaan, serta menghapus semua pesanan?
 				</Modal.Body>
 				<Modal.Footer>
 					<Button variant="outline-secondary" onClick={() => setTampilReset(false)}>
