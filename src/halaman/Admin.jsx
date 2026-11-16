@@ -93,10 +93,10 @@ export default function Admin() {
 	}, [orders]);
 
 	const ringkasan = [
-		{ label: "Pendapatan Hari Ini", nilai: formatRupiah(totalPendapatan), tren: "+12.4%", warna: "success" },
-		{ label: "Pesanan Baru", nilai: `${orders.length}`, tren: "+8.2%", warna: "primary" },
-		{ label: "Menu Aktif", nilai: `${menu.length}`, tren: "+3", warna: "warning" },
-		{ label: "Rating Rata-rata", nilai: "4.9/5", tren: "+0.2", warna: "danger" },
+		{ label: "Pendapatan Hari Ini", nilai: formatRupiah(totalPendapatan) },
+		{ label: "Pesanan Baru", nilai: `${orders.length}` },
+		{ label: "Menu Aktif", nilai: `${menu.length}` },
+		{ label: "Rating Rata-rata", nilai: "4.9/5" },
 	];
 
 	const menuPopuler = useMemo(() => {
@@ -335,7 +335,6 @@ export default function Admin() {
 									<Card.Body>
 										<div className="d-flex justify-content-between align-items-start mb-3">
 											<span className="admin-stat-label">{item.label}</span>
-											<Badge bg={item.warna} pill>{item.tren}</Badge>
 										</div>
 										<h2 className="admin-stat-value mb-0">{item.nilai}</h2>
 									</Card.Body>
