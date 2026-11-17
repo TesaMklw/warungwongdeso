@@ -3,20 +3,25 @@ import { Alert, Button, Container, Form } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
+// Menampilkan form ulasan. Hanya akun pelanggan yang dapat mengirim.
 export default function Ulasan() {
 	const { pengguna } = useAuth();
+	// Hanya peran pelanggan yang boleh mengirim ulasan.
 	const bolehUlas = pengguna?.peran === "pelanggan";
 	const [isi, setIsi] = useState("");
 	const [terkirim, setTerkirim] = useState(false);
 
+	// Mengatur judul tab browser.
 	useEffect(() => {
 		document.title = "Warung Wong Deso - Ulasan";
 	}, []);
 
+	// Mengosongkan textarea setelah ulasan terkirim.
 	function kirim(event) {
 		event.preventDefault();
 		if (!bolehUlas) return;
 		setTerkirim(true);
+		// Textarea dikosongkan setelah ulasan tercatat terkirim.
 		setIsi("");
 	}
 

@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap");
 
+/* Warna, font, dan variabel Bootstrap yang dipakai di seluruh situs. */
 :root {
 	--warna-tinta: #3e2723;
 	--warna-merah: #6b2c2c;
@@ -18,6 +19,7 @@
 	--bs-border-color: var(--warna-garis);
 }
 
+/* Halaman mengisi tinggi layar, isi utama memanjang di antara navbar dan footer. */
 html {
 	scroll-behavior: smooth;
 }
@@ -52,6 +54,7 @@ a {
 	text-decoration: none;
 }
 
+/* Navbar menempel di atas dengan latar krem. */
 .site-header {
 	background: rgba(248, 241, 231, 0.96);
 	border-bottom: 1px solid var(--warna-garis);
@@ -142,6 +145,7 @@ a {
 	}
 }
 
+/* Kartu, grafik, dan tabel di panel admin. */
 .admin-panel {
 	--admin-panel-bg: #fffaf5;
 	--admin-panel-border: #eadbca;
@@ -329,6 +333,7 @@ a {
 	background: var(--warna-merah);
 }
 
+/* Judul besar di beranda dan halaman dalam. */
 .judul-hero {
 	font-size: clamp(2.4rem, 5vw, 3.6rem);
 	line-height: 1.1;
@@ -418,6 +423,7 @@ a {
 	color: var(--warna-krem);
 }
 
+/* Kartu foto di halaman galeri. */
 .galeri-grid {
 	max-width: 1080px;
 	margin-inline: auto;
@@ -470,6 +476,7 @@ a {
 	font-weight: 500;
 }
 
+/* Tabel menu dan sel yang bisa diklik untuk memesan. */
 .bungkus-tabel {
 	max-height: 540px;
 	overflow: auto;
@@ -540,6 +547,7 @@ a {
 	color: var(--warna-tinta);
 }
 
+/* Daftar pesanan di samping tabel menu. */
 .judul-kartu {
 	font-family: var(--font-judul);
 	font-size: 1.35rem;
@@ -619,6 +627,7 @@ a {
 	color: var(--warna-tinta);
 }
 
+/* Kartu lokasi, statistik, dan kontak di halaman Tentang. */
 .bagian-halaman {
 	scroll-margin-top: 88px;
 	padding: 28px 0;
@@ -677,6 +686,7 @@ a {
 	width: min(600px, 100%);
 }
 
+/* Footer di bagian bawah setiap halaman. */
 .site-footer {
 	margin-top: auto;
 	background: var(--warna-tinta);
@@ -788,6 +798,7 @@ a {
 	font-weight: 500;
 }
 
+/* Kartu sign in, sign up, dan profil. */
 .kartu-akun,
 .kartu-profil {
 	background: var(--warna-kertas);

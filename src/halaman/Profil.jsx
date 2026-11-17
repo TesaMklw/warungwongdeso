@@ -3,19 +3,23 @@ import { Button, Card, Col, Container, Row } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
+// Menampilkan profil akun. Pengguna yang belum login diarahkan ke sign in.
 export default function Profil() {
 	const { pengguna, keluar } = useAuth();
 	const navigate = useNavigate();
 
+	// Mengatur judul tab browser.
 	useEffect(() => {
 		document.title = "Warung Wong Deso - Profil";
 	}, []);
 
+	// Keluar dari akun lalu kembali ke beranda.
 	function keluarAkun() {
 		keluar();
 		navigate("/");
 	}
 
+	// Tamu melihat ajakan sign in, bukan data profil.
 	if (!pengguna) {
 		return (
 			<Container className="py-5">
@@ -48,6 +52,7 @@ export default function Profil() {
 		);
 	}
 
+	// Pasangan label dan nilai yang ditampilkan di kartu profil.
 	const baris = [
 		["Peran", pengguna.peran === "admin" ? "Admin" : "Pelanggan"],
 		["Username", pengguna.username],

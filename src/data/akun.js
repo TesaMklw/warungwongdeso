@@ -1,3 +1,4 @@
+// Akun pelanggan bawaan untuk mencoba pemesanan.
 export const akunPelanggan = {
 	peran: "pelanggan",
 	username: "pelanggan",
@@ -8,6 +9,7 @@ export const akunPelanggan = {
 	alamat: "Jl. Mawar No. 8, Desa Sukamaju",
 };
 
+// Akun admin bawaan untuk masuk ke panel kelola warung.
 export const akunAdmin = {
 	peran: "admin",
 	username: "admin",
@@ -18,10 +20,14 @@ export const akunAdmin = {
 	alamat: "Warung Wong Deso",
 };
 
+// Daftar akun yang bisa dipakai untuk sign in.
 const daftarAkun = [akunPelanggan, akunAdmin];
 
+// Mencocokkan username dan password dengan akun yang sudah disediakan.
 export function cariAkun(username, password) {
+	// Spasi di ujung username diabaikan.
 	const nama = username.trim();
+	// Mengembalikan akun yang username dan password-nya sama persis.
 	return daftarAkun.find(
 		(akun) => akun.username === nama && akun.password === password,
 	);

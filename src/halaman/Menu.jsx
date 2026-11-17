@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { bacaDataWarung, formatRupiah, KUNCI_DATA, tambahPesanan } from "../data/menu";
 
+// Nilai awal form pemesan saat belum login atau setelah pembayaran selesai.
 const awalPelanggan = {
 	nama: "",
 	telepon: "",
@@ -21,29 +22,37 @@ const awalPelanggan = {
 	catatan: "",
 };
 
+// Mengisi form dari data akun jika yang login adalah pelanggan.
 function dataPelanggan(pengguna) {
+	// Admin dan tamu mendapat form kosong.
 	if (pengguna?.peran !== "pelanggan") return awalPelanggan;
 	return {
 		nama: pengguna.nama,
 		telepon: pengguna.telepon,
 		alamat: pengguna.alamat,
+		// Catatan tidak diambil dari profil.
 		catatan: "",
 	};
 }
 
+// Pilihan metode pembayaran di modal konfirmasi.
 const metodeBayar = [
 	{ nilai: "tunai", label: "Tunai" },
 	{ nilai: "transfer", label: "Transfer" },
 	{ nilai: "qris", label: "QRIS" },
 ];
 
+// Menyusun teks pencarian dari nama, keterangan, dan kategori.
 function teksCari(item) {
 	return `${item.nama} ${item.keterangan} ${item.kategori}`.toLowerCase();
 }
 
+// Menampilkan halaman menu dan formulir pemesanan.
 export default function Menu() {
 	const { pengguna } = useAuth();
+	// Hanya peran pelanggan yang boleh menambah pesanan.
 	const bolehPesan = pengguna?.peran === "pelanggan";
+	// Keranjang hanya menyimpan id dan jumlah.
 	const [keranjang, setKeranjang] = useState([]);
 	const [pelanggan, setPelanggan] = useState(() => dataPelanggan(pengguna));
 	const [cari, setCari] = useState("");
@@ -51,24 +60,31 @@ export default function Menu() {
 	const [tampilKonfirmasi, setTampilKonfirmasi] = useState(false);
 	const [metode, setMetode] = useState("");
 	const [berhasil, setBerhasil] = useState(false);
+	// Katalog diambil dari localStorage, termasuk perubahan dari panel admin.
 	const [katalog, setKatalog] = useState(() => bacaDataWarung());
+	// Menandai pembayaran selesai supaya keranjang baru dikosongkan setelah modal tertutup.
 	const sudahBayar = useRef(false);
 
 	const kunciAkun = pengguna?.peran === "pelanggan" ? pengguna.username : "";
 	const [akunForm, setAkunForm] = useState(kunciAkun);
 
+	// Menyesuaikan form saat akun yang login berganti.
 	if (kunciAkun !== akunForm) {
 		setAkunForm(kunciAkun);
 		setPelanggan(dataPelanggan(pengguna));
+		// Keluar dari akun pelanggan mengosongkan keranjang.
 		if (!kunciAkun) setKeranjang([]);
 	}
 
+	// Mengatur judul tab browser.
 	useEffect(() => {
 		document.title = "Warung Wong Deso - Menu";
 	}, []);
 
 	useEffect(() => {
+		// Memperbarui katalog jika data berubah di tab lain.
 		function segarkan(event) {
+			// Event storage lain diabaikan.
 			if (event.key && event.key !== KUNCI_DATA) return;
 			setKatalog(bacaDataWarung());
 		}
@@ -77,6 +93,7 @@ export default function Menu() {
 		return () => window.removeEventListener("storage", segarkan);
 	}, []);
 
+	// Mengelompokkan menu sesuai urutan kategori, lalu membuang kategori kosong.
 	const kelompokMenu = useMemo(
 		() =>
 			katalog.kategori
@@ -87,14 +104,17 @@ export default function Menu() {
 				.filter((kelompok) => kelompok.item.length > 0),
 		[katalog],
 	);
+	// Daftar datar untuk pencarian, urutan harga, dan keranjang.
 	const daftarMenu = useMemo(
 		() => kelompokMenu.flatMap((kelompok) => kelompok.item),
 		[kelompokMenu],
 	);
 
 	const kata = cari.trim().toLowerCase();
+	// Tabel memakai tampilan khusus saat ada kata cari atau urutan harga.
 	const sedangMenyusun = urutan !== "bawaan" || kata.length > 0;
 
+	// Mengurutkan menu dan menandai item yang cocok dengan pencarian.
 	const tampilan = useMemo(() => {
 		const daftar = daftarMenu.map((item) => ({ ...item, cocok: false }));
 		if (urutan === "termurah") {
@@ -107,6 +127,7 @@ export default function Menu() {
 				(a, b) => b.harga - a.harga || a.nama.localeCompare(b.nama, "id"),
 			);
 		}
+		// Tanpa kata kunci, urutan saja yang dipakai.
 		if (!kata) return daftar;
 
 		const cocok = [];
@@ -115,9 +136,11 @@ export default function Menu() {
 			if (teksCari(item).includes(kata)) cocok.push({ ...item, cocok: true });
 			else lain.push(item);
 		}
+		// Item yang cocok ditaruh di atas.
 		return [...cocok, ...lain];
 	}, [daftarMenu, kata, urutan]);
 
+	// Menggabungkan keranjang dengan data menu terbaru. Item yang sudah dihapus dibuang.
 	const pesanan = keranjang
 		.map((item) => {
 			const menu = daftarMenu.find((menuItem) => menuItem.id === item.id);
@@ -131,13 +154,16 @@ export default function Menu() {
 		0,
 	);
 
+	// Menyimpan perubahan satu field pada data pemesan.
 	function ubahPelanggan(event) {
 		const { name, value } = event.target;
 		setPelanggan((sekarang) => ({ ...sekarang, [name]: value }));
 	}
 
+	// Menambah item ke keranjang. Item yang sudah ada jumlahnya ditambah.
 	function tambah(id) {
 		if (!bolehPesan) return;
+		// Alert sukses disembunyikan saat pesanan baru dimulai.
 		setBerhasil(false);
 		setKeranjang((sekarang) => {
 			const ada = sekarang.find((item) => item.id === id);
@@ -148,6 +174,7 @@ export default function Menu() {
 		});
 	}
 
+	// Menaikkan atau menurunkan jumlah. Item dihapus jika jumlah menjadi 0.
 	function ubahJumlah(id, delta) {
 		setKeranjang((sekarang) =>
 			sekarang.flatMap((item) => {
@@ -158,13 +185,16 @@ export default function Menu() {
 		);
 	}
 
+	// Membuka modal pembayaran jika form valid dan keranjang tidak kosong.
 	function bukaKonfirmasi(event) {
 		event.preventDefault();
 		if (!bolehPesan || pesanan.length === 0) return;
+		// Metode pembayaran direset setiap kali modal dibuka.
 		setMetode("");
 		setTampilKonfirmasi(true);
 	}
 
+	// Menyimpan pesanan, menandai sudah bayar, lalu menutup modal.
 	function bayar() {
 		if (!metode || pesanan.length === 0) return;
 		tambahPesanan(pelanggan, pesanan);
@@ -173,7 +203,9 @@ export default function Menu() {
 		setTampilKonfirmasi(false);
 	}
 
+	// Mengosongkan keranjang setelah modal tertutup dan pembayaran selesai.
 	function selesaiTutup() {
+		// Menutup modal tanpa bayar tidak mengosongkan keranjang.
 		if (!sudahBayar.current) return;
 		sudahBayar.current = false;
 		setKeranjang([]);
@@ -181,6 +213,7 @@ export default function Menu() {
 		setMetode("");
 	}
 
+	// Enter atau spasi pada baris menu berfungsi sama seperti klik.
 	function tekanBaris(event, id) {
 		if (event.key === "Enter" || event.key === " ") {
 			event.preventDefault();
@@ -188,6 +221,7 @@ export default function Menu() {
 		}
 	}
 
+	// Satu sel tabel yang dapat diklik untuk menambah pesanan.
 	function selPesan(item, isi, label) {
 		return (
 			<td
@@ -203,6 +237,7 @@ export default function Menu() {
 		);
 	}
 
+	// Satu baris menu. Kategori hanya muncul pada baris pertama kelompoknya.
 	function barisMenu(item, kategori, rowSpan) {
 		return (
 			<tr
@@ -222,6 +257,7 @@ export default function Menu() {
 	}
 
 	return (
+		// Kolom kiri menampilkan tabel menu, kolom kanan menampilkan form pesanan.
 		<Container className="py-4 py-lg-5">
 			<Row className="g-4 menu-sejajar">
 				<Col lg={7} className="kolom-menu">
@@ -422,6 +458,7 @@ export default function Menu() {
 				</Col>
 			</Row>
 
+			{/* Modal konfirmasi: ringkasan pesanan dan pilihan pembayaran. */}
 			<Modal
 				show={tampilKonfirmasi}
 				onHide={() => setTampilKonfirmasi(false)}

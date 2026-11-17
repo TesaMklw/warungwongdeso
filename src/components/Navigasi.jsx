@@ -2,6 +2,7 @@ import { Button, Container, Dropdown, Nav, Navbar } from "react-bootstrap";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
+// Tautan navbar selain Beranda dan Tentang Kami.
 const tautan = [
 	{ ke: "/galeri", label: "Galeri" },
 	{ ke: "/menu", label: "Menu" },
@@ -9,12 +10,14 @@ const tautan = [
 	{ ke: "/profil", label: "Profil" },
 ];
 
+// Bagian dalam halaman Tentang yang bisa dibuka dari dropdown.
 const menuTentang = [
 	{ ke: "/tentang#profil", hash: "#profil", label: "Profil" },
 	{ ke: "/tentang#lokasi", hash: "#lokasi", label: "Lokasi" },
 	{ ke: "/tentang#kontak", hash: "#kontak", label: "Kontak" },
 ];
 
+// Menampilkan navbar atas, tautan halaman, serta tombol masuk atau keluar.
 export default function Navigasi() {
 	const { pathname, hash } = useLocation();
 	const { pengguna, keluar } = useAuth();
@@ -30,6 +33,7 @@ export default function Navigasi() {
 					</span>
 				</Navbar.Brand>
 				<div className="nav-aksi">
+					{/* Pengguna yang sudah login melihat tombol keluar. */}
 					{pengguna ? (
 						<Button
 							type="button"
@@ -52,6 +56,7 @@ export default function Navigasi() {
 							Beranda
 						</Nav.Link>
 						<Dropdown className="nav-item nav-tentang">
+							{/* Tautan utama Tentang Kami, panah di samping membuka bagian halaman. */}
 							<Nav.Link as={NavLink} to="/tentang">
 								Tentang Kami
 							</Nav.Link>

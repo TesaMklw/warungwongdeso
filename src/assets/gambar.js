@@ -6,12 +6,14 @@ import pesananNasiKotak from "./pesanan-nasi-kotak.jpg";
 import nasiKotakSiapAntar from "./Nasi-Siap--Antar.jpeg";
 import suasanaWarung from "./suasana-warung.jpg";
 
+// Foto utama halaman beranda.
 export const fotoBeranda = {
 	src: fotoWarung,
 	alt: "Nasi tumpeng dengan lauk dan sayuran",
 	keterangan: "Nasi tumpeng",
 };
 
+// Daftar foto yang ditampilkan di halaman galeri.
 export const daftarGaleri = [
 	{
 		src: pengunjungIkanBakar,

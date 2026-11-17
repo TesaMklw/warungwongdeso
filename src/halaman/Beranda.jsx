@@ -3,7 +3,9 @@ import { Button, Col, Container, Row } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { fotoBeranda } from "../assets/gambar";
 
+// Menampilkan halaman depan berisi judul dan foto nasi tumpeng.
 export default function Beranda() {
+	// Mengatur judul tab browser.
 	useEffect(() => {
 		document.title = "Warung Wong Deso - Beranda";
 	}, []);
@@ -11,6 +13,7 @@ export default function Beranda() {
 	return (
 		<Container className="py-4 py-lg-5">
 			<Row className="align-items-center g-4 g-lg-5">
+				{/* Teks pembuka dan tombol ke halaman menu. */}
 				<Col lg={6}>
 					<p className="eyebrow">
 						<span aria-hidden="true" /> Warung makan keluarga • sejak 2012
@@ -29,6 +32,7 @@ export default function Beranda() {
 						<span>•</span> 2.000+ pelanggan pulang kenyang
 					</p>
 				</Col>
+				{/* Foto utama beranda. */}
 				<Col lg={6}>
 					<img
 						className="foto-hero"

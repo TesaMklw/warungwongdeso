@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Button, Card, Col, Container, Row } from "react-bootstrap";
 
+// Angka ringkas yang ditampilkan di bagian profil warung.
 const statistik = [
 	{ angka: "2012", label: "Tahun Berdiri" },
 	{ angka: "28+", label: "Menu" },
@@ -8,11 +9,14 @@ const statistik = [
 ];
 
 const alamat = "Jl. Raya Lenteng Agung Timur No. 32, Jagakarsa";
+// Tautan Google Maps dari nama warung dan alamat.
 const tautanPeta = `https://www.google.com/maps?q=${encodeURIComponent(
 	`Warung Wong Deso, ${alamat}`,
 )}`;
 
+// Menampilkan profil warung, peta lokasi, dan kontak.
 export default function Tentang() {
+	// Mengatur judul tab browser.
 	useEffect(() => {
 		document.title = "Warung Wong Deso - Tentang Kami";
 	}, []);
@@ -30,6 +34,7 @@ export default function Tentang() {
 				</p>
 			</header>
 
+			{/* Cerita singkat warung dan tiga angka ringkas. */}
 			<section id="profil" className="bagian-halaman text-center">
 				<p className="eyebrow justify-content-center">
 					<span /> Profil kami
@@ -55,6 +60,7 @@ export default function Tentang() {
 				</Row>
 			</section>
 
+			{/* Peta dan alamat warung. */}
 			<section id="lokasi" className="bagian-halaman">
 				<div className="text-center">
 					<p className="eyebrow justify-content-center">
@@ -74,6 +80,7 @@ export default function Tentang() {
 				</div>
 			</section>
 
+			{/* Email, telepon, dan tautan peta. */}
 			<section id="kontak" className="bagian-halaman">
 				<div className="text-center">
 					<p className="eyebrow justify-content-center">

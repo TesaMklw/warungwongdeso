@@ -1,8 +1,12 @@
+// Mengubah angka menjadi format rupiah, misalnya 15000 menjadi Rp 15.000.
 export function formatRupiah(nilai) {
+	// id-ID memakai titik sebagai pemisah ribuan.
 	return `Rp ${nilai.toLocaleString("id-ID")}`;
 }
 
+// Daftar menu bawaan, dikelompokkan menurut kategori.
 export const kelompokMenu = [
+	// Makanan utama warung.
 	{
 		nama: "Menu Utama",
 		item: [
@@ -134,6 +138,7 @@ export const kelompokMenu = [
 			},
 		],
 	},
+	// Lauk yang bisa ditambah di luar menu utama.
 	{
 		nama: "Lauk Tambahan",
 		item: [
@@ -169,6 +174,7 @@ export const kelompokMenu = [
 			},
 		],
 	},
+	// Minuman yang dijual bersama makanan.
 	{
 		nama: "Minuman",
 		item: [
@@ -194,17 +200,22 @@ export const kelompokMenu = [
 	},
 ];
 
+// Mencari satu menu berdasarkan id. Mengembalikan null jika tidak ketemu.
 export function cariMenu(id) {
 	for (const kelompok of kelompokMenu) {
+		// Mencari item di dalam satu kategori.
 		const ditemukan = kelompok.item.find((item) => item.id === id);
 		if (ditemukan) return ditemukan;
 	}
 	return null;
 }
 
+// Kunci localStorage untuk kategori, menu, dan pesanan.
 export const KUNCI_DATA = "warung-wong-deso-admin";
+// Nama kategori diambil dari kelompok menu bawaan.
 export const kategoriAwal = kelompokMenu.map((kelompok) => kelompok.nama);
 
+// Meratakan menu bawaan menjadi satu daftar beserta nama kategorinya.
 export function menuAwal() {
 	return kelompokMenu.flatMap((kelompok) =>
 		kelompok.item.map((item) => ({
@@ -212,37 +223,48 @@ export function menuAwal() {
 			nama: item.nama,
 			keterangan: item.keterangan,
 			harga: item.harga,
+			// Kategori disalin dari nama kelompok, bukan dari item.
 			kategori: kelompok.nama,
 		})),
 	);
 }
 
+// Menyeragamkan field menu. Harga yang tidak valid menjadi 0.
 function normalisasiItem(item) {
 	return {
 		id: item.id,
+		// Nama dan kategori dibersihkan dari spasi.
 		nama: String(item.nama || "").trim(),
 		kategori: String(item.kategori || "").trim(),
 		harga: Number(item.harga) || 0,
+		// Data lama memakai field deskripsi, jadi keduanya diterima.
 		keterangan: String(item.keterangan ?? item.deskripsi ?? ""),
 	};
 }
 
+// Menggabungkan kategori tersimpan dengan kategori di menu tanpa duplikat.
 function susunKategori(menu, tersimpan) {
+	// Memakai daftar tersimpan jika bentuknya array, selain itu memakai bawaan.
 	const dasar = Array.isArray(tersimpan)
 		? tersimpan.map((nama) => String(nama).trim()).filter(Boolean)
 		: [...kategoriAwal];
 	const unik = [];
 
+	// Urutan dasar dipertahankan, lalu kategori dari menu ditambahkan di belakang.
 	for (const nama of [...dasar, ...menu.map((item) => item.kategori)]) {
 		if (!nama) continue;
+		// Perbandingan tidak membedakan huruf besar dan kecil.
 		if (unik.some((ada) => ada.toLowerCase() === nama.toLowerCase())) continue;
 		unik.push(nama);
 	}
 
+	// Selalu menyisakan minimal satu kategori.
 	return unik.length ? unik : ["Menu Utama"];
 }
 
+// Membaca data warung dari localStorage. Data kosong atau rusak memakai data awal.
 export function bacaDataWarung() {
+	// Cadangan dipakai saat penyimpanan kosong, rusak, atau di luar browser.
 	const cadangan = {
 		kategori: [...kategoriAwal],
 		menu: menuAwal(),
@@ -255,13 +277,17 @@ export function bacaDataWarung() {
 		if (!mentah) return cadangan;
 
 		const parsed = JSON.parse(mentah);
+		// Field yang bukan array diganti dengan nilai kosong.
 		const orders = Array.isArray(parsed.orders) ? parsed.orders : [];
 		const menuTersimpan = Array.isArray(parsed.menu) ? parsed.menu : [];
+		// Data baru menyimpan daftar kategori. Data lama hanya menyimpan menu.
 		const punyaKatalog = Array.isArray(parsed.kategori);
 		const awal = menuAwal();
 		const idAwal = new Set(awal.map((item) => String(item.id)));
 		const menu = punyaKatalog
+			// Katalog lengkap: pakai menu tersimpan dan buang item tanpa nama.
 			? menuTersimpan.map(normalisasiItem).filter((item) => item.nama)
+			// Data lama: menu bawaan tetap ada, item tambahan yang id-nya baru ikut masuk.
 			: [
 					...awal,
 					...menuTersimpan
@@ -279,8 +305,10 @@ export function bacaDataWarung() {
 	}
 }
 
+// Menyimpan kategori, menu, dan pesanan agar tetap ada setelah refresh.
 export function simpanDataWarung(data) {
 	if (typeof window === "undefined") return;
+	// Hanya tiga field ini yang ditulis, agar data lain tidak ikut tersimpan.
 	window.localStorage.setItem(
 		KUNCI_DATA,
 		JSON.stringify({
@@ -291,11 +319,14 @@ export function simpanDataWarung(data) {
 	);
 }
 
+// Menambah pesanan baru dengan id WD-waktu dan status Menunggu.
 export function tambahPesanan(pelanggan, pesanan) {
+	// Membaca data terbaru agar pesanan lama tidak tertimpa.
 	const data = bacaDataWarung();
 	const order = {
 		id: `WD-${Date.now()}`,
 		nama: pelanggan.nama,
+		// Daftar menu diringkas menjadi satu teks, misalnya "Ayam Bakar x2".
 		menu: pesanan.map((item) => `${item.nama} x${item.jumlah}`).join(", "),
 		total: pesanan.reduce((jumlah, item) => jumlah + item.harga * item.jumlah, 0),
 		status: "Menunggu",

@@ -1,5 +1,6 @@
 import { Container } from "react-bootstrap";
 
+// Menampilkan footer berisi hak cipta serta kontak email dan telepon.
 export default function Kaki() {
 	return (
 		<footer className="site-footer">

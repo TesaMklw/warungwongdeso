@@ -2,7 +2,9 @@ import { useEffect } from "react";
 import { Col, Container, Row } from "react-bootstrap";
 import { daftarGaleri } from "../assets/gambar";
 
+// Menampilkan foto pengunjung dan hidangan yang pernah dipesan.
 export default function Galeri() {
+	// Mengatur judul tab browser.
 	useEffect(() => {
 		document.title = "Warung Wong Deso - Galeri";
 	}, []);

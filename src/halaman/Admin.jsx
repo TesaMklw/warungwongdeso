@@ -23,8 +23,10 @@ import {
 } from "../data/menu";
 
 const statusSteps = ["Menunggu", "Dimasak", "Siap diantar", "Selesai"];
+// Mengubah angka menjadi format rupiah dengan spasi yang tidak terputus.
 const formatRupiah = (nilai) => `Rp\u00a0${Number(nilai).toLocaleString("id-ID")}`;
 
+// Mengembalikan form menu kosong. Kategori default memakai kategori pertama.
 function formulirKosong(kategori = kategoriAwal) {
 	return {
 		nama: "",
@@ -34,33 +36,41 @@ function formulirKosong(kategori = kategoriAwal) {
 	};
 }
 
+// Panel admin untuk dashboard, kelola menu, dan status pesanan.
 export default function Admin() {
 	const { pengguna, keluar } = useAuth();
 	const navigate = useNavigate();
+	// Panel penuh hanya tampil untuk peran admin.
 	const adminAktif = pengguna?.peran === "admin";
 	const [tab, setTab] = useState("dashboard");
+	// Data awal dibaca sekali dari localStorage.
 	const [kategori, setKategori] = useState(() => bacaDataWarung().kategori);
 	const [menu, setMenu] = useState(() => bacaDataWarung().menu);
 	const [orders, setOrders] = useState(() => bacaDataWarung().orders);
 	const [form, setForm] = useState(() => formulirKosong(bacaDataWarung().kategori));
+	// null berarti form sedang menambah menu, bukan mengubah.
 	const [editingId, setEditingId] = useState(null);
 	const [tampilReset, setTampilReset] = useState(false);
 	const [konfirmasiMenu, setKonfirmasiMenu] = useState(null);
 	const [namaKategori, setNamaKategori] = useState("");
+	// Nama kategori yang sedang diubah. null berarti tidak ada yang diedit.
 	const [ubahKategori, setUbahKategori] = useState(null);
 	const [draftKategori, setDraftKategori] = useState("");
 	const [pesanKategori, setPesanKategori] = useState("");
 	const [kategoriDihapus, setKategoriDihapus] = useState(null);
 
+	// Mengatur judul tab browser.
 	useEffect(() => {
 		document.title = "Warung Wong Deso - Panel Admin";
 	}, []);
 
+	// Menyimpan data ke localStorage setiap kali kategori, menu, atau pesanan berubah.
 	useEffect(() => {
 		simpanDataWarung({ kategori, menu, orders });
 	}, [kategori, menu, orders]);
 
 	useEffect(() => {
+		// Menambahkan pesanan baru dari tab lain tanpa menimpa pesanan yang sudah ada.
 		function segarkan(event) {
 			if (event.key && event.key !== KUNCI_DATA) return;
 			const data = bacaDataWarung();
@@ -75,20 +85,24 @@ export default function Admin() {
 		return () => window.removeEventListener("storage", segarkan);
 	}, []);
 
+	// Menjumlahkan total semua pesanan.
 	const totalPendapatan = useMemo(
 		() => orders.reduce((sum, item) => sum + Number(item.total || 0), 0),
 		[orders],
 	);
 
+	// Menyusun tinggi tujuh batang grafik dari jumlah pesanan.
 	const chartValues = useMemo(() => {
 		if (!orders.length) return Array(7).fill(0);
 
 		const data = Array(7).fill(0);
 		orders.forEach((_, index) => {
+			// Pesanan dibagi ke tujuh slot hari.
 			const slot = index % 7;
 			data[slot] += 18 + (index % 4) * 10;
 		});
 
+		// Tinggi batang dibatasi 100 persen.
 		return data.map((value) => Math.min(100, value));
 	}, [orders]);
 
@@ -99,6 +113,7 @@ export default function Admin() {
 		{ label: "Rating Rata-rata", nilai: "4.9/5" },
 	];
 
+	// Menghitung menu yang paling sering muncul, lalu mengambil empat teratas.
 	const menuPopuler = useMemo(() => {
 		const hitung = {};
 
@@ -107,6 +122,7 @@ export default function Admin() {
 			daftar.forEach((item) => {
 				const namaMenu = item.trim();
 				if (!namaMenu) return;
+				// Akhiran jumlah, misalnya "x2", dibuang agar nama menu yang dihitung.
 				const key = namaMenu.replace(/\s*x\d+$/i, "");
 				if (!key) return;
 				hitung[key] = (hitung[key] || 0) + 1;
@@ -117,6 +133,7 @@ export default function Admin() {
 			.map(([nama, penjualan]) => ({
 				nama,
 				penjualan,
+				// Panjang bar kemajuan dibatasi antara 35 dan 100.
 				porsi: Math.min(100, Math.max(35, penjualan * 18)),
 			}))
 			.sort((a, b) => b.penjualan - a.penjualan)
@@ -125,6 +142,7 @@ export default function Admin() {
 		return data.length ? data : [{ nama: "Belum ada data", penjualan: 0, porsi: 0 }];
 	}, [orders]);
 
+	// Menyusun tiga kalimat ringkasan dari pesanan yang masuk.
 	const aktivitas = useMemo(() => {
 		if (!orders.length) {
 			return ["Belum ada pesanan masuk. Dashboard siap menampilkan data saat pelanggan mulai memesan."];
@@ -142,11 +160,13 @@ export default function Admin() {
 		];
 	}, [orders]);
 
+	// Menyimpan input satu field pada form menu.
 	const handleFormChange = (event) => {
 		const { name, value } = event.target;
 		setForm((current) => ({ ...current, [name]: value }));
 	};
 
+	// Menampilkan konfirmasi sebelum menu ditambah atau diubah.
 	const handleSubmit = (event) => {
 		event.preventDefault();
 		setKonfirmasiMenu({
@@ -161,12 +181,14 @@ export default function Admin() {
 		});
 	};
 
+	// Menjalankan tambah, ubah, atau hapus menu setelah dikonfirmasi.
 	const jalankanKonfirmasiMenu = () => {
 		if (!konfirmasiMenu) return;
 		const { jenis, item } = konfirmasiMenu;
 
 		if (jenis === "hapus") {
 			setMenu((current) => current.filter((menuItem) => menuItem.id !== item.id));
+			// Form edit ditutup jika menu yang sedang diubah ikut terhapus.
 			if (editingId === item.id) {
 				setEditingId(null);
 				setForm(formulirKosong(kategori));
@@ -177,12 +199,14 @@ export default function Admin() {
 			setForm(formulirKosong(kategori));
 		} else {
 			setMenu((current) => [...current, item]);
+			// Form kembali kosong, kategori tetap mengikuti menu yang baru ditambah.
 			setForm(formulirKosong([item.kategori]));
 		}
 
 		setKonfirmasiMenu(null);
 	};
 
+	// Mengisi form dengan menu yang akan diubah, lalu pindah ke tab menu.
 	const handleEdit = (item) => {
 		setEditingId(item.id);
 		setForm({
@@ -194,23 +218,28 @@ export default function Admin() {
 		setTab("menu");
 	};
 
+	// Meminta konfirmasi sebelum menghapus menu.
 	const mintaHapus = (item) => {
 		setKonfirmasiMenu({ jenis: "hapus", item });
 	};
 
+	// Mengubah status satu pesanan.
 	const updateOrderStatus = (id, status) => {
 		setOrders((current) =>
 			current.map((order) => (order.id === id ? { ...order, status } : order)),
 		);
 	};
 
+	// Keluar dari akun lalu kembali ke beranda.
 	const handleLogout = () => {
 		keluar();
 		navigate("/");
 	};
 
+	// Membandingkan nama kategori tanpa membedakan huruf besar dan kecil.
 	const namaKategoriSama = (a, b) => a.toLowerCase() === b.toLowerCase();
 
+	// Menambah kategori baru jika namanya belum ada.
 	const tambahKategori = (event) => {
 		event.preventDefault();
 		const nama = namaKategori.trim();
@@ -224,6 +253,7 @@ export default function Admin() {
 		setPesanKategori("");
 	};
 
+	// Menyimpan nama kategori baru dan memperbarui menu yang memakainya.
 	const simpanUbahKategori = () => {
 		const nama = draftKategori.trim();
 		if (!nama || !ubahKategori) return;
@@ -237,6 +267,7 @@ export default function Admin() {
 				item.kategori === ubahKategori ? { ...item, kategori: nama } : item,
 			),
 		);
+		// Form menu ikut berubah jika sedang memakai kategori yang diganti namanya.
 		setForm((current) =>
 			current.kategori === ubahKategori ? { ...current, kategori: nama } : current,
 		);
@@ -245,11 +276,13 @@ export default function Admin() {
 		setPesanKategori("");
 	};
 
+	// Menghapus kategori yang sudah dikonfirmasi.
 	const hapusKategori = () => {
 		const nama = kategoriDihapus;
 		if (!nama) return;
 		const sisa = kategori.filter((item) => item !== nama);
 		setKategori(sisa);
+		// Form dikosongkan jika kategori yang dipilih ikut terhapus.
 		setForm((current) =>
 			current.kategori === nama ? formulirKosong(sisa) : current,
 		);
@@ -261,6 +294,7 @@ export default function Admin() {
 		setPesanKategori("");
 	};
 
+	// Menolak hapus jika kategori masih berisi menu atau tersisa satu kategori.
 	const mintaHapusKategori = (nama) => {
 		if (menu.some((item) => item.kategori === nama)) {
 			setPesanKategori(`Masih ada menu di kategori "${nama}". Pindahkan atau hapus menunya dulu.`);
@@ -274,6 +308,7 @@ export default function Admin() {
 		setKategoriDihapus(nama);
 	};
 
+	// Mengembalikan menu dan kategori ke bawaan, lalu menghapus semua pesanan.
 	const resetAdminData = () => {
 		setKategori([...kategoriAwal]);
 		setMenu(menuAwal());
@@ -288,6 +323,7 @@ export default function Admin() {
 	};
 
 	if (!adminAktif) {
+		// Pengunjung yang bukan admin diarahkan ke halaman sign in.
 		return (
 			<Container className="py-5">
 				<Row className="justify-content-center">
@@ -326,6 +362,7 @@ export default function Admin() {
 				</div>
 			</div>
 
+			{/* Ringkasan angka, grafik, dan pesanan terbaru. */}
 			{tab === "dashboard" && (
 				<>
 					<Row className="g-3 mb-4">
@@ -429,6 +466,7 @@ export default function Admin() {
 				</>
 			)}
 
+			{/* Form kategori, form menu, dan tabel daftar menu. */}
 			{tab === "menu" && (
 				<>
 				<Card className="shadow-sm border-0 admin-card mb-4">
@@ -598,6 +636,7 @@ export default function Admin() {
 				</>
 			)}
 
+			{/* Tabel pesanan beserta tombol ubah status. */}
 			{tab === "orders" && (
 				<Card className="shadow-sm border-0 admin-card order-table-card">
 					<Card.Body className="p-0">

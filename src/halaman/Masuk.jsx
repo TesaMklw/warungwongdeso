@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { akunAdmin, akunPelanggan } from "../data/akun";
 
+// Nilai awal form sign up.
 const awalDaftar = {
 	nama: "",
 	username: "",
@@ -11,39 +12,48 @@ const awalDaftar = {
 	password: "",
 };
 
+// Menampilkan halaman sign in dan sign up. Tab diatur lewat query mode.
 export default function Masuk() {
 	const { pengguna, masuk } = useAuth();
 	const navigate = useNavigate();
 	const [params, setParams] = useSearchParams();
+	// Query mode=daftar membuka tab sign up. Nilai lain membuka tab sign in.
 	const mode = params.get("mode") === "daftar" ? "daftar" : "masuk";
 	const [formMasuk, setFormMasuk] = useState({ username: "", password: "" });
 	const [formDaftar, setFormDaftar] = useState(awalDaftar);
 	const [galat, setGalat] = useState("");
 	const [infoDaftar, setInfoDaftar] = useState("");
 
+	// Mengatur judul tab browser.
 	useEffect(() => {
 		document.title = "Warung Wong Deso - Sign In";
 	}, []);
 
+	// Berpindah tab dan menghapus pesan error sebelumnya.
 	function gantiMode(berikutnya) {
 		setGalat("");
 		setInfoDaftar("");
+		// Mode daftar memakai query, mode masuk memakai URL tanpa query.
 		setParams(berikutnya === "daftar" ? { mode: "daftar" } : {});
 	}
 
+	// Menyimpan input satu field pada form sign in.
 	function ubahMasuk(event) {
 		const { name, value } = event.target;
 		setFormMasuk((sekarang) => ({ ...sekarang, [name]: value }));
 	}
 
+	// Menyimpan input satu field pada form sign up.
 	function ubahDaftar(event) {
 		const { name, value } = event.target;
 		setFormDaftar((sekarang) => ({ ...sekarang, [name]: value }));
 	}
 
+	// Jika berhasil, admin diarahkan ke panel dan pelanggan ke profil.
 	function kirimMasuk(event) {
 		event.preventDefault();
 		const hasil = masuk(formMasuk.username, formMasuk.password);
+		// Pesan gagal ditampilkan di bawah form.
 		if (!hasil.ok) {
 			setGalat(hasil.pesan);
 			return;
@@ -51,6 +61,7 @@ export default function Masuk() {
 		navigate(hasil.pengguna.peran === "admin" ? "/admin" : "/profil");
 	}
 
+	// Menampilkan info bahwa pendaftaran belum tersedia karena belum ada backend.
 	function kirimDaftar(event) {
 		event.preventDefault();
 		setInfoDaftar(
